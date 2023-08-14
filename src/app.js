@@ -59,7 +59,7 @@ app.post('/tweets', (req, res)=>{
 
 app.get("/tweets", (req, res) => {
 
-    if(!tweets){
+    if(tweets.length==0){
         res.send(tweets);
         return;
     }
