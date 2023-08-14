@@ -41,7 +41,7 @@ app.post('/tweets', (req, res)=>{
     const result = users.filter( user => user.username === username );
 
     if( !result ){
-        response.status(409).send("UNAUTHORIZED"); 
+        res.status(409).send("UNAUTHORIZED"); 
         return;
     }
 
@@ -80,12 +80,7 @@ app.get("/tweets", (req, res) => {
         resposta.push(msg);
     } 
 
-    res.send(resposta);
+    res.status(200).send(resposta);
 });
-
-
-
-
-
 
 app.listen(5000, () => console.log('App Servidor executando na porta 5000'));
