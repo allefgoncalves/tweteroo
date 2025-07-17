@@ -1,86 +1,60 @@
 import express from 'express';
 import cors from 'cors';
+import { MongoClient } from "mongodb"; 
+
+//const mongoClient = new MongoClient(process.env.DATABASE_URL);
+const mongoClient = new MongoClient('mongodb://localhost:27017/tweetero');
+let db;
+const users = [];
+const tweets = [];
+
+mongoClient.connect()
+  .then(() => {
+    db = mongoClient.db("tweteroo");
+    console.log("Conectado ao banco de dados");
+  })
+  .catch((err) => console.log("Erro ao conectar:", err.message));
 
 const app = express(); 
 app.use(cors());
 app.use(express.json());
 
-const users=[];
-const tweets=[];
-
 app.post('/sign-up', (req, res)=>{
-    console.log(req);
-    const { username, avatar } = req.body;
+    const{ username, avatar }=req.body;
 
-    if ( !username || !avatar ){
+    if( !username || !avatar ){
         res.status( 422 ).send("Todos os campos devem ser preenchidos!");
         return;
     }
 
-    const novo = {
-        id: users.length + 1,
-        username: username,
-        avatar: avatar
-    }
-
-    users.push(novo);  
-
-    res.status(201).send(novo);
-
+    db.collection("users").insertOne({ username, avatar })    
+        .then(() => res.status(201).send("Ok"))
+        .catch(err => res.status(500).send(err.message))
 });
 
 app.post('/tweets', (req, res)=>{
-    
-    const { username, tweet } = req.body;
+    const{ username, tweet }=req.body;
 
-    if ( !username || !tweet ){
+    if( !username || !tweet ){
         res.status( 422 ).send("Todos os campos devem ser preenchidos!");
         return;
-    }
+    }  
 
-    const result = users.filter( user => user.username === username );
-
-    if( !result ){
-        res.status(409).send("UNAUTHORIZED"); 
-        return;
-    }
-
-    const novo = {
-        id: users.length + 1,
-        username: username,
-        tweet: tweet
-    }
-
-    tweets.push(novo);  
-
-    tweets.status(201).send("Ok");
-
+    db.collection("tweets").insertOne({ username, tweet })    
+        .then(() => res.status(201).send("Ok"))
+        .catch(err => res.status(500).send(err.message))
 });
 
-app.get("/tweets", (req, res) => {
+app.get("/tweets",(req, res)=>{
+    db.collection("tweets").find().toArray()
+        .then(data => res.send(data))
+        .catch(err => res.status(500).send(err.message))
+});
 
-    if(tweets.length==0){
-        res.send(tweets);
-        return;
-    }
-
-    const msg = {
-        username:"",
-        avatar:"",
-        tweet:""
-    }
-
-    const resposta=[];
-
-    for(let i=tweets.length; i>=0; i--){
-        msg.username = tweets[i].username;
-        msg.tweet = tweets[i].tweet;
-        const user = users.filter( user => user.username === tweets[i].username );
-        msg.avatar = user.avatar;
-        resposta.push(msg);
-    } 
-
-    res.status(200).send(resposta);
+app.get("/users",(req, res)=>{
+    db.collection("users").find().toArray()
+        .then(data => res.send(data))
+        .catch(err => res.status(500).send(err.message))
 });
 
 app.listen(5000, () => console.log('App Servidor executando na porta 5000'));
