@@ -1,16 +1,20 @@
 import express from 'express';
 import cors from 'cors';
-import { MongoClient } from "mongodb"; 
+import { MongoClient, ObjectId, } from "mongodb"; 
+import dotenv from "dotenv";
+import joi from 'joi';
+dotenv.config();
 
-//const mongoClient = new MongoClient(process.env.DATABASE_URL);
-const mongoClient = new MongoClient('mongodb://localhost:27017/tweetero');
+const DATABASE_URL = process.env.DATABASE_URL;  
+const mongoClient = new MongoClient(DATABASE_URL);
+
 let db;
-const users = [];
+const users = [];           
 const tweets = [];
 
 mongoClient.connect()
   .then(() => {
-    db = mongoClient.db("tweteroo");
+    db = mongoClient.db();
     console.log("Conectado ao banco de dados");
   })
   .catch((err) => console.log("Erro ao conectar:", err.message));
@@ -22,9 +26,15 @@ app.use(express.json());
 app.post('/sign-up', (req, res)=>{
     const{ username, avatar }=req.body;
 
-    if( !username || !avatar ){
-        res.status( 422 ).send("Todos os campos devem ser preenchidos!");
-        return;
+     const tweets = joi.object({
+        username: joi.string().required(),
+        avatar: joi.string().required()
+    });
+
+    const validation = tweets.validate({ username, avatar },{ abortEarly: false });
+    if(validation.error){
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
     }
 
     db.collection("users").insertOne({ username, avatar })    
@@ -35,10 +45,16 @@ app.post('/sign-up', (req, res)=>{
 app.post('/tweets', (req, res)=>{
     const{ username, tweet }=req.body;
 
-    if( !username || !tweet ){
-        res.status( 422 ).send("Todos os campos devem ser preenchidos!");
-        return;
-    }  
+    const tweets = joi.object({
+        username: joi.string().required(),
+        tweet: joi.string().required()
+    });
+
+    const validation = tweets.validate({ username, tweet },{ abortEarly: false });
+    if(validation.error){
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
 
     db.collection("tweets").insertOne({ username, tweet })    
         .then(() => res.status(201).send("Ok"))
@@ -57,4 +73,18 @@ app.get("/users",(req, res)=>{
         .catch(err => res.status(500).send(err.message))
 });
 
-app.listen(5000, () => console.log('App Servidor executando na porta 5000'));
+app.get("/tweets/:id",(req, res)=>{
+    const { id } = req.params;
+    console.log(id); 
+    db.collection("tweets").findOne({ _id: new ObjectId(id) })
+		.then((data) => {
+			console.log(data);
+            return res.send(data);
+		})
+		.catch(() => {
+			return res.status(404).send(err);
+		})
+});
+
+const PORT = process.env.PORT;   
+app.listen(PORT, () => console.log(`App Servidor executando na porta ${PORT}`));
