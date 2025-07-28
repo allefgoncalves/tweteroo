@@ -61,10 +61,24 @@ app.post('/tweets', (req, res)=>{
         .catch(err => res.status(500).send(err.message))
 });
 
-app.get("/tweets",(req, res)=>{
-    db.collection("tweets").find().toArray()
-        .then(data => res.send(data))
-        .catch(err => res.status(500).send(err.message))
+app.get("/tweets", async (req, res) => {
+  try {
+    const tweets = await db.collection("tweets").find().sort({ _id: -1 }).toArray();
+
+    const tweetsComAvatar = await Promise.all(tweets.map(async (tweet) => {
+      const user = await db.collection("users").findOne({ username: tweet.username });
+      return {
+        _id: tweet._id,
+        username: tweet.username,
+        avatar: user?.avatar || "",
+        tweet: tweet.tweet
+      };
+    }));
+
+    res.send(tweetsComAvatar);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
 });
 
 app.get("/users",(req, res)=>{
@@ -96,6 +110,37 @@ app.delete('/tweets/:id', async (req, res) => {
         return res.status(204).send("deletado com sucesso");
     } catch (err){
         res.status(500).send(err.message);
+    }
+});
+
+app.put('/tweets/:id', async (req, res)=>{
+    const { id } = req.params;
+    const{ username, tweet }=req.body;
+
+    const tweets = joi.object({
+        username: joi.string().required(),
+        tweet: joi.string().required()
+    });
+
+    const validation = tweets.validate({ username, tweet },{ abortEarly: false });
+    if(validation.error){
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
+
+    try{
+        const existencia = await db.collection("tweets").findOne({ _id: new ObjectId(id) });
+        if (!existencia) {
+            return res.status(404).send("tweet não encontrado");
+        }
+        
+        await db
+        .collection("tweets")
+        .updateOne({ _id: new ObjectId(id) },{ $set:{ username, tweet }});
+
+        return res.status(204).send("tweet atualizado");
+    } catch (err) {
+        return res.status(500).send(err.message);
     }
 });
 
