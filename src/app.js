@@ -96,8 +96,8 @@ app.get("/tweets/:id",(req, res)=>{
             return res.send(data);
 		})
 		.catch(() => {
-			return res.status(404).send(err);
-		})
+			return res.status(500).send(err.message);
+		})  
 });
 
 app.delete('/tweets/:id', async (req, res) => {
@@ -107,7 +107,7 @@ app.delete('/tweets/:id', async (req, res) => {
         if(resutado.deletedCount == 0 ){
             return res.status(404).send("não foi encontrado");
         }
-        return res.status(204).send("deletado com sucesso");
+        return res.status(204);
     } catch (err){
         res.status(500).send(err.message);
     }
@@ -138,7 +138,7 @@ app.put('/tweets/:id', async (req, res)=>{
         .collection("tweets")
         .updateOne({ _id: new ObjectId(id) },{ $set:{ username, tweet }});
 
-        return res.status(204).send("tweet atualizado");
+        return res.status(204);
     } catch (err) {
         return res.status(500).send(err.message);
     }
