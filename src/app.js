@@ -75,7 +75,7 @@ app.get("/users",(req, res)=>{
 
 app.get("/tweets/:id",(req, res)=>{
     const { id } = req.params;
-    console.log(id); 
+
     db.collection("tweets").findOne({ _id: new ObjectId(id) })
 		.then((data) => {
 			console.log(data);
@@ -84,6 +84,19 @@ app.get("/tweets/:id",(req, res)=>{
 		.catch(() => {
 			return res.status(404).send(err);
 		})
+});
+
+app.delete('/tweets/:id', async (req, res) => {
+    const { id } = req.params;
+    try{
+        const resutado = await db.collection("tweets").deleteOne({ _id: new ObjectId(id) });
+        if(resutado.deletedCount == 0 ){
+            return res.status(404).send("não foi encontrado");
+        }
+        return res.status(204).send("deletado com sucesso");
+    } catch (err){
+        res.status(500).send(err.message);
+    }
 });
 
 const PORT = process.env.PORT;   
